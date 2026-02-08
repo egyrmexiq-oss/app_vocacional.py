@@ -6,9 +6,9 @@ import random
 from datetime import datetime
 
 # ==========================================
-# 🛡️ RED DE SEGURIDAD (¡ESTO EVITA EL ERROR ROJO!)
+# 🛡️ RED DE SEGURIDAD
 # ==========================================
-model = None # Inicializamos la variable vacía para que siempre exista
+model = None 
 
 # ==========================================
 # ⚙️ 1. CONFIGURACIÓN Y ESTILOS
@@ -30,7 +30,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🧠 2. CONEXIÓN CON GEMINI (CORREGIDA)
+# 🧠 2. CONEXIÓN CON GEMINI
 # ==========================================
 api_key = st.secrets.get("GOOGLE_API_KEY")
 
@@ -41,7 +41,6 @@ if api_key:
     except Exception as e:
         st.error(f"Error conectando con Gemini: {e}")
 else:
-    # Si no hay clave, mostramos aviso pero NO rompemos la app
     st.warning("⚠️ Falta configurar la GOOGLE_API_KEY en los Secrets de Streamlit.")
 
 # ==========================================
@@ -81,7 +80,7 @@ with st.sidebar:
     except: st.header("Quantum 🚀")
     
     st.title("Parámetros de Diseño")
-    if "visitas" not in st.session_state: st.session_state.visitas = random.randint(1200, 1500)
+    if "visitas" not in st.session_state: st.session_state.visitas = random.randint(1200, 1800)
     st.metric("👀 Estudiantes Orientados", f"{st.session_state.visitas:,}")
     st.markdown("---")
     
@@ -89,6 +88,7 @@ with st.sidebar:
     edad = st.slider("Edad Cronológica:", 15, 60, 17)
     
     st.markdown("### 🚫 ¿Qué ODIAS?")
+    # Lista de odio
     odio_materias = st.multiselect("No me hables de:", ["Matemáticas Avanzadas", "Leer mucha Historia", "Química/Biología", "Hablar en público", "Estar sentado todo el día", "Trabajo físico pesado", "Programación/Código", "Vender/Convencer gente"])
     
     st.markdown("### ❤️ ¿Qué AMAS?")
@@ -118,12 +118,32 @@ if analizar_btn:
     if not model:
         st.error("⚠️ Error de Conexión: No se pudo activar el cerebro de la IA. Revisa la API Key en Secrets.")
     else:
+        # --- PROMPT MEJORADO CON FILTRO NEGATIVO ---
         prompt_sistema = f"""
-        ACTÚA COMO: Orientador Vocacional Futurista.
-        OBJETIVO: Plan de carrera para {edad} años, resistente a la IA.
-        PERFIL: Odia {', '.join(odio_materias)}. Ama {hobbies}. Estilo {estilo_trabajo}.
-        TAREA: 3 OPCIONES (Universitaria, Técnica, Oficio Digital).
-        INCLUYE: Riesgo IA, Dónde estudiar en México, Por qué hace match.
+        ACTÚA COMO: Orientador Vocacional Futurista Senior.
+        OBJETIVO: Crear un plan de carrera para {edad} años, resistente a la IA.
+        
+        PERFIL DEL USUARIO:
+        - Lo que AMA (Hobbies): {hobbies}
+        - Estilo de trabajo: {estilo_trabajo}
+        - 🚫 MATERIAS QUE ODIA/EVITA: {', '.join(odio_materias)}
+        
+        REGLA DE ORO (EXCLUSIÓN TOTAL):
+        Si el usuario seleccionó que ODIA o EVITA un tema, ESTÁ PROHIBIDO sugerir carreras centradas en eso. 
+        Ejemplo: Si odia 'Historia', NO sugieras historiador, arqueólogo ni nada que requiera leer libros antiguos.
+        Ejemplo: Si odia 'Matemáticas', NO sugieras Ingeniería Física o Actuaría.
+        ¡Respeta sus aversiones! Busca caminos alternativos que usen sus Hobbies.
+        
+        TAREA:
+        Genera 3 OPCIONES (1 Universitaria, 1 Técnica/Corta, 1 Oficio Digital/Moderno).
+        
+        FORMATO DE RESPUESTA PARA CADA OPCIÓN:
+        ### [Emoji] Nombre de la Carrera
+        * **¿Por qué para ti?**: Conecta sus hobbies con esta carrera.
+        * **Escudo Anti-IA**: ¿Por qué un robot no puede hacer esto bien?
+        * **Dónde estudiar (México)**: Lugares reales y específicos.
+        
+        Termina con una frase inspiradora corta.
         """
         
         with st.chat_message("assistant"):
@@ -147,6 +167,6 @@ if prompt := st.chat_input("¿Tienes dudas?"):
     with st.chat_message("user"): st.markdown(prompt)
     with st.chat_message("assistant"):
         if model:
-            resp = model.generate_content(f"Duda vocacional rápida: {prompt}")
+            resp = model.generate_content(f"Duda vocacional rápida: {prompt}. Recuerda que odia: {', '.join(odio_materias)}")
             st.markdown(resp.text)
             st.session_state.chat_history.append({"role": "assistant", "content": resp.text})
