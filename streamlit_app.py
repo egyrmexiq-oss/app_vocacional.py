@@ -4,7 +4,7 @@ from fpdf import FPDF
 import base64
 import random
 from datetime import datetime
-
+#abregar contador
 # ==========================================
 # ⚙️ 1. CONFIGURACIÓN Y ESTILOS
 # ==========================================
