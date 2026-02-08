@@ -1,236 +1,273 @@
 import streamlit as st
 import google.generativeai as genai
-from fpdf import FPDF
 import base64
-import random
-from datetime import datetime
+from fpdf import FPDF
+from elevenlabs.client import ElevenLabs
+import requests # <--- NUEVA HERRAMIENTA PARA TRAER IMÁGENES
+from io import BytesIO
 
 # ==========================================
-# ⚙️ 1. CONFIGURACIÓN Y ESTILOS
+# ⚙️ 1. CONFIGURACIÓN INICIAL
 # ==========================================
-st.set_page_config(page_title="Quantum Future Path", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Wellness Flow", page_icon="🌿", layout="wide", initial_sidebar_state="expanded")
 
+# ==========================================
+# 🧠 2. CONEXIONES
+# ==========================================
+# A. Google Gemini
+api_key = st.secrets.get("GOOGLE_API_KEY")
+if not api_key: st.stop()
+
+try:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-2.5-flash') 
+except: st.stop()
+
+# B. ElevenLabs (Voz)
+eleven_key = st.secrets.get("ELEVEN_API_KEY")
+client_eleven = None
+if eleven_key:
+    try: client_eleven = ElevenLabs(api_key=eleven_key)
+    except: pass
+
+VOICE_ID = "21m00Tcm4TlvDq8ikWAM" 
+
+# ==========================================
+# 🎨 3. ESTILOS "DARK ZEN"
+# ==========================================
 st.markdown("""
     <style>
-    .stApp { background-color: #0E1117 !important; color: #E0E0E0 !important; }
-    [data-testid="stSidebar"] { background-color: #161B22 !important; border-right: 1px solid #30363D; }
-    .stTextInput > div > div > input { color: white !important; background-color: #0D1117 !important; border: 1px solid #30363D; }
-    .stSelectbox > div > div > div { color: white !important; background-color: #0D1117 !important; }
-    .stTextArea > div > div > textarea { color: white !important; background-color: #0D1117 !important; }
-    div.stButton > button { background-color: #238636 !important; color: white !important; border: none; border-radius: 6px; width: 100%; padding: 0.5rem; }
-    div.stButton > button:hover { background-color: #2EA043 !important; }
-    h1, h2, h3 { color: #E6EDF3 !important; }
-    div[data-testid="stChatMessage"] { background-color: #161B22 !important; border: 1px solid #30363D; border-radius: 10px; }
+    .stApp { background-color: #0E1612 !important; color: #E0E0E0 !important; }
+    [data-testid="stSidebar"] { background-color: #1A2F25 !important; border-right: 1px solid #344E41; }
+    [data-testid="stSidebar"] * { color: #DAD7CD !important; }
+    h1, h2, h3, p, label, .stMarkdown { color: #E8F5E9 !important; }
+    div[data-testid="stChatMessage"]:nth-child(odd) { background-color: #1A2F25 !important; border: 1px solid #344E41; }
+    div[data-testid="stChatMessage"]:nth-child(even) { background-color: #2D4035 !important; border: 1px solid #588157; }
+    div[data-testid="stChatMessage"] p { color: #FFFFFF !important; }
+    div[data-testid="stChatInput"] { background-color: #1A2F25 !important; border: 1px solid #588157 !important; }
+    div[data-testid="stChatInput"] textarea { color: #FFFFFF !important; }
+    div.stButton > button { background-color: #588157 !important; color: white !important; border: none; border-radius: 12px; }
+    header[data-testid="stHeader"] { background-color: transparent !important; }
     </style>
     """, unsafe_allow_html=True)
-
-# ==========================================
-# 🔐 2. SISTEMA DE LOGIN QUANTUM (MODO CINE 🎬)
-# ==========================================
-if "usuario_activo" not in st.session_state:
-    # --- CSS ESPECÍFICO PARA EL LOGIN (FONDO PANTALLA COMPLETA) ---
-    st.markdown(f"""
-        <style>
-        /* 1. Ocultar la Sidebar y la barra superior solo en el Login */
-        [data-testid="stSidebar"] {{ display: none; }}
-        [data-testid="stHeader"] {{ background-color: rgba(0,0,0,0); }}
-        
-        /* 2. Imagen de Fondo que cubre TODO */
-        .stApp {{
-            background-image: url("https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop");
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }}
-        
-        /* 3. Tarjeta Central (Efecto Cristal) */
-        .login-card {{
-            background-color: rgba(14, 22, 33, 0.85); /* Fondo oscuro semitransparente */
-            padding: 40px;
-            border-radius: 20px;
-            border: 1px solid #30363D;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-            text-align: center;
-            max-width: 400px;
-            margin: 0 auto;
-            margin-top: 100px; /* Bajarla un poco */
-        }}
-        h2 {{ color: white !important; }}
-        p {{ color: #b0b8c4 !important; }}
-        </style>
-        """, unsafe_allow_html=True)
-
-    # --- ESTRUCTURA VISUAL ---
-    # Usamos columnas para centrar la "Tarjeta"
-    col1, col2, col3 = st.columns([1, 2, 1])
+    #st.markdown("---")
+    # Contador de Visitas (Mentalidad de Crecimiento)
+st.markdown("""
+    <div style="background-color: #2e1a47; padding: 10px; border-radius: 5px; text-align: center;">
+        <span style="color: #E0B0FF; font-weight: bold;">🧘 Alumnos Atendidos:</span>
+        <img src="https://api.visitorbadge.io/api/visitors?path=quantum-yoga.com&label=&countColor=%23E0B0FF&style=flat&labelStyle=none" style="height: 20px;" />
+    </div>
+    """, unsafe_allow_html=True)
     
-    with col2:
-        # Creamos el contenedor visual con HTML
-        st.markdown("""
-        <div class="login-card">
-            <h2 style='margin-bottom: 10px;'>Quantum Future Path 🚀</h2>
-            <p style='margin-bottom: 20px;'>Diseña tu futuro a prueba de obsolescencia.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Inputs de Streamlit (fuera del HTML para que funcionen)
-        # Usamos un contenedor vacío para estilizar un poco mejor la posición
-        st.markdown("<div style='max-width: 400px; margin: 0 auto;'>", unsafe_allow_html=True)
-        clave_input = st.text_input("Ingresa tu Clave de Acceso:", type="password", placeholder="DEMO", label_visibility="collapsed")
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        if st.button("🚀 INICIAR VIAJE", use_container_width=True):
-            llaves_validas = st.secrets.get("access_keys", {})
-            if clave_input in llaves_validas:
-                st.session_state.usuario_activo = llaves_validas[clave_input]
-                st.rerun()
-            else:
-                st.error("⛔ Clave incorrecta. Intenta con DEMO.")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.stop() # 🛑 DETIENE TODO AQUÍ SI NO ESTÁ LOGUEADO
-
+    #st.markdown("---")
 # ==========================================
-# 🧠 3. CONEXIÓN CON GEMINI
-# ==========================================
-model = None 
-api_key = st.secrets.get("GOOGLE_API_KEY")
-
-if api_key:
-    try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash')
-    except Exception as e:
-        st.error(f"Error conectando con Gemini: {e}")
-else:
-    st.warning("⚠️ Falta configurar la GOOGLE_API_KEY en los Secrets.")
-
-# ==========================================
-# 🛠️ 4. FUNCIONES
+# 🛠️ 4. FUNCIONES DE APOYO
 # ==========================================
 def limpiar_texto(texto):
     return texto.encode('latin-1', 'ignore').decode('latin-1')
 
-def generar_pdf_blindado(nombre, perfil, analisis):
+def generar_pdf_yoga(usuario, historial):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_fill_color(22, 27, 34)
-    pdf.rect(0, 0, 210, 40, 'F')
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", 'B', 24)
-    pdf.cell(0, 20, txt="Quantum Future Path", ln=1, align='C')
-    pdf.set_font("Arial", 'I', 12)
-    pdf.cell(0, 10, txt="Plan de Carrera Blindado contra Obsolescencia", ln=1, align='C')
-    pdf.ln(20)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, txt=limpiar_texto(f"Estudiante: {nombre}"), ln=1)
-    pdf.cell(0, 10, txt=limpiar_texto(f"Fecha: {datetime.now().strftime('%d/%m/%Y')}"), ln=1)
-    pdf.ln(5)
-    pdf.set_font("Arial", '', 11)
-    for linea in analisis.split('\n'):
-        linea_limpia = linea.replace('**', '').replace('*', '-')
-        pdf.multi_cell(0, 7, txt=limpiar_texto(linea_limpia))
-        pdf.ln(1)
+    pdf.set_font("Arial", size=12)
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, txt=limpiar_texto(f"Rutina: {usuario}"), ln=1, align='C')
+    pdf.ln(10)
+    pdf.set_font("Arial", size=11)
+    for msg in historial:
+        role = "Wendy" if msg['role'] == 'assistant' else "Alumno"
+        if "audio" not in msg and "imagen" not in msg:
+            content = limpiar_texto(msg['content'])
+            pdf.set_font("Arial", 'B', 11)
+            pdf.cell(0, 8, txt=f"{role}:", ln=1)
+            pdf.set_font("Arial", size=11)
+            pdf.multi_cell(0, 7, txt=content)
+            pdf.ln(5)
     return pdf.output(dest='S').encode('latin-1')
 
+def generar_audio_elevenlabs(texto):
+    if not client_eleven: return None
+    try:
+        audio = client_eleven.text_to_speech.convert(
+            voice_id=VOICE_ID, model_id="eleven_multilingual_v2", text=texto
+        )
+        return b"".join(chunk for chunk in audio)
+    except: return None
+
+# --- FUNCIÓN NUEVA: EL DISFRAZ PARA WIKIPEDIA 🕵️‍♂️ ---
+def obtener_imagen_nube(url):
+    """Descarga la imagen engañando al servidor con un Header de navegador"""
+    try:
+        # Este es el 'Pasaporte' falso para que crean que somos un navegador Chrome
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return BytesIO(response.content) # Devuelve la imagen lista
+    except:
+        return None
+    return None
+
+#def mostrar_imagen_postura(texto_wendy):
+    # ...
+import os # <--- Asegúrate de tener esto arriba del todo con los otros imports
+def mostrar_imagen_postura(texto_wendy):
+    """
+    Muestra imágenes locales (subidas a GitHub) si detecta la palabra clave.
+    ¡100% Robusto y sin bloqueos!
+    """
+    # DICCIONARIO: Palabra Clave -> Nombre de tu archivo
+    diccionario_local = {
+        "árbol": "arbol.png",
+        "vrksasana": "arbol.png",
+        
+        "guerrero": "guerrero.png",
+        "virabhadrasana": "guerrero.png",
+        
+        "cobra": "cobra.png",
+        "bhujangasana": "cobra.png",
+        
+        # Puedes agregar más aquí cuando subas más fotos:
+        # "loto": "loto.png",
+    }
+    
+    texto_min = texto_wendy.lower()
+    
+    for clave, archivo in diccionario_local.items():
+        if clave in texto_min:
+            # Verificamos si el archivo realmente existe para no romper la app
+            if os.path.exists(archivo):
+                c1, c2, c3 = st.columns([1, 2, 1])
+                with c2:
+                    st.image(archivo, caption=f"Postura: {clave.capitalize()}", use_container_width=True)
+                return archivo # Éxito
+    return None
 # ==========================================
-# 🏠 5. INTERFAZ (SIDEBAR) - Solo visible tras Login
+# 🚪 5. LOGIN INTELIGENTE
 # ==========================================
+if "usuario_activo" not in st.session_state:
+    st.image("https://images.unsplash.com/photo-1545205597-3d9d02c29597?q=80&w=2000&h=800&auto=format&fit=crop", use_container_width=True)
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.markdown("<h2 style='text-align: center;'>Wendy's Wellness's Flow</h2>", unsafe_allow_html=True)
+        clave = st.text_input("Clave de Acceso:", type="password")
+        if st.button("Entrar", use_container_width=True):
+            llaves = st.secrets.get("access_keys", {})
+            if clave in llaves:
+                st.session_state.usuario_activo = llaves[clave]
+                st.session_state.tipo_plan = "DEMO" if clave == "DEMO" else "PREMIUM"
+                st.session_state.mensajes = []
+                st.rerun()
+            elif clave == "ADMIN123": 
+                st.session_state.usuario_activo = "Super Admin"
+                st.session_state.tipo_plan = "PREMIUM"
+                st.session_state.mensajes = []
+                st.rerun()
+            else:
+                st.error("Clave incorrecta.")
+    st.stop()
+
+# ==========================================
+# 🏡 6. APP PRINCIPAL
+# ==========================================
+tipo_plan = st.session_state.get("tipo_plan", "DEMO")
+nivel = "Básico" 
+
 with st.sidebar:
-    try: st.image("logo_quantum.png", use_container_width=True)
-    except: st.header("Quantum 🚀")
-    
-    st.caption(f"Sesión: **{st.session_state.usuario_activo}**") # Muestra quién está conectado
-    
-    st.title("Parámetros de Diseño")
-    if "visitas" not in st.session_state: st.session_state.visitas = random.randint(1200, 1800)
-    st.metric("👀 Estudiantes Orientados", f"{st.session_state.visitas:,}")
+    st.markdown("**Quantum Yoga ⚛️**")
+    try: st.image("logo_quantum.png", use_container_width=True) 
+    except: st.header("Quantum Yoga ⚛️")
     st.markdown("---")
     
-    nombre = st.text_input("Nombre:", "Futuro CEO")
-    edad = st.slider("Edad Cronológica:", 15, 60, 17)
+    st.markdown("**Tu Instructora:**")
+    try: st.image("Wendy v1.jpeg", caption="Wendy (IA)", use_container_width=True)
+    except: st.write("🧘‍♀️")
+    st.markdown("---")
     
-    st.markdown("### 🚫 ¿Qué ODIAS?")
-    odio_materias = st.multiselect("No me hables de:", ["Matemáticas Avanzadas", "Leer mucha Historia", "Química/Biología", "Hablar en público", "Estar sentado todo el día", "Trabajo físico pesado", "Programación/Código", "Vender/Convencer gente"])
+    st.caption(f"Hola, **{st.session_state.usuario_activo}**")
+    if tipo_plan == "PREMIUM":
+        st.success(f"💎 Plan: {tipo_plan}")
+        st.markdown("### 🎚️ Intensidad")
+        nivel = st.select_slider("Nivel:", options=["Básico", "Medio", "Avanzado"], value="Básico", label_visibility="collapsed")
+    else:
+        st.warning(f"🔒 Plan: {tipo_plan}")
+        nivel = "DEMO"
+    st.markdown("---")
     
-    st.markdown("### ❤️ ¿Qué AMAS?")
-    hobbies = st.text_area("En tu tiempo libre (Hobbies):", placeholder="Ej: Jugar videojuegos, desarmar cosas, dibujar...")
+    usar_voz = st.toggle("🔊 Voz de Wendy", value=False)
     
-    estilo_trabajo = st.radio("¿Cómo prefieres trabajar?", ["🐺 Lobo Solitario", "🤝 Manada (Equipo)", "⚖️ Híbrido"])
+    if st.button("🔄 Nueva Sesión", use_container_width=True):
+        st.session_state.mensajes = []
+        st.rerun()
+        
+    if len(st.session_state.mensajes) > 1:
+        st.markdown("---")
+        st.markdown("### 📄 Tu Rutina")
+        try:
+            pdf_data = generar_pdf_yoga(st.session_state.usuario_activo, st.session_state.mensajes)
+            b64 = base64.b64encode(pdf_data).decode()
+            href = f'<a href="data:application/octet-stream;base64,{b64}" download="Rutina_Quantum.pdf" style="text-decoration:none; color: #000000 !important; background-color: #E0E0E0 !important; padding: 15px; border-radius: 10px; display: block; text-align: center; border: 2px solid #000000; font-weight: 800; width: 100%;">📥 DESCARGAR PDF</a>'
+            st.markdown(href, unsafe_allow_html=True)
+        except: pass
     
     st.markdown("---")
-    analizar_btn = st.button("🔮 Generar Futuro Blindado")
-    
-    if st.button("🔒 Cerrar Sesión"):
+    if st.button("🔒 Cerrar Sesión", use_container_width=True):
         del st.session_state["usuario_activo"]
         st.rerun()
 
-# ==========================================
-# 🚀 6. ÁREA PRINCIPAL
-# ==========================================
-st.title("Quantum Future Path 🏛️")
-st.markdown(f"Diseñando la mejor versión profesional para: **{nombre}**")
+# --- PROMPTS ---
+if nivel == "DEMO": INSTRUCCION = "ERES WENDY. MODO DEMO. Respuestas cortas. Invita a Premium."
+elif nivel == "Básico": INSTRUCCION = "ERES WENDY. NIVEL BÁSICO. Explica la postura del árbol, el guerrero o la cobra paso a paso."
+elif nivel == "Medio": INSTRUCCION = "ERES WENDY. NIVEL MEDIO. Flujo dinámico."
+elif nivel == "Avanzado": INSTRUCCION = "ERES WENDY. NIVEL AVANZADO. Usa Sánscrito."
 
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-    st.session_state.chat_history.append({"role": "assistant", "content": "¡Hola! Soy tu Arquitecto de Vida. Completa el formulario a la izquierda y presiona el botón verde."})
+# --- CHAT ---
+st.title("Wellness’s Flow 🌿")
 
-for msg in st.session_state.chat_history:
+if "mensajes" not in st.session_state:
+    st.session_state.mensajes = []
+    st.session_state.mensajes.append({"role": "assistant", "content": f"¡Namasté, {st.session_state.usuario_activo}! ¿Qué postura practicamos hoy? (Prueba: Árbol, Cobra, Guerrero)"})
+
+for msg in st.session_state.mensajes:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
+        
+        # MOSTRAR IMAGEN GUARDADA EN HISTORIAL 🖼️
+        if "imagen_data" in msg:
+             c1, c2, c3 = st.columns([1, 2, 1])
+             with c2:
+                st.image(msg["imagen_data"], caption="Postura Visual", use_container_width=True)
+                
+        # MOSTRAR AUDIO 🎵
+        if "audio_data" in msg:
+            st.audio(msg["audio_data"], format="audio/mp3")
 
-# LÓGICA DEL ANÁLISIS
-if analizar_btn:
-    if not model:
-        st.error("⚠️ Error de Conexión: No se pudo activar el cerebro de la IA. Revisa la API Key en Secrets.")
-    else:
-        # Prompt mejorado V2
-        prompt_sistema = f"""
-        ACTÚA COMO: Orientador Vocacional Futurista Senior.
-        OBJETIVO: Crear un plan de carrera para {edad} años, resistente a la IA.
-        
-        PERFIL DEL USUARIO:
-        - Lo que AMA (Hobbies): {hobbies}
-        - Estilo de trabajo: {estilo_trabajo}
-        - 🚫 MATERIAS QUE ODIA/EVITA: {', '.join(odio_materias)}
-        
-        REGLA DE ORO (EXCLUSIÓN TOTAL):
-        Si el usuario seleccionó que ODIA o EVITA un tema, ESTÁ PROHIBIDO sugerir carreras centradas en eso. 
-        
-        TAREA:
-        Genera 3 OPCIONES (1 Universitaria, 1 Técnica/Corta, 1 Oficio Digital/Moderno).
-        
-        FORMATO DE RESPUESTA PARA CADA OPCIÓN:
-        ### [Emoji] Nombre de la Carrera
-        * **¿Por qué para ti?**: Conecta sus hobbies con esta carrera.
-        * **Escudo Anti-IA**: ¿Por qué un robot no puede hacer esto bien?
-        * **Dónde estudiar (México)**: Lugares reales y específicos.
-        
-        Termina con una frase inspiradora corta.
-        """
-        
-        with st.chat_message("assistant"):
-            with st.spinner("Escaneando futuros posibles... 📡"):
-                try:
-                    response = model.generate_content(prompt_sistema)
-                    st.markdown(response.text)
-                    st.session_state.chat_history.append({"role": "user", "content": "Generar Diagnóstico"})
-                    st.session_state.chat_history.append({"role": "assistant", "content": response.text})
-                    st.session_state.visitas += 1
-                    
-                    pdf_bytes = generar_pdf_blindado(nombre, "Perfil Completo", response.text)
-                    b64 = base64.b64encode(pdf_bytes).decode()
-                    href = f'<a href="data:application/octet-stream;base64,{b64}" download="Plan_Blindado_{nombre}.pdf" style="text-decoration:none; color: #000000 !important; background-color: #00E676 !important; padding: 15px; border-radius: 10px; display: block; text-align: center; border: 2px solid #000000; font-weight: 800; width: 100%; margin-top: 20px;">📥 DESCARGAR PLAN (PDF)</a>'
-                    st.markdown(href, unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f"Error en la Matrix: {e}")
-
-if prompt := st.chat_input("¿Tienes dudas?"):
-    st.session_state.chat_history.append({"role": "user", "content": prompt})
+if prompt := st.chat_input("Escribe aquí tu pregunta o solicita un plan de yoga..."):
+    st.session_state.mensajes.append({"role": "user", "content": prompt})
     with st.chat_message("user"): st.markdown(prompt)
+
     with st.chat_message("assistant"):
-        if model:
-            resp = model.generate_content(f"Duda vocacional rápida: {prompt}. Recuerda que odia: {', '.join(odio_materias)}")
-            st.markdown(resp.text)
-            st.session_state.chat_history.append({"role": "assistant", "content": resp.text})
+        with st.spinner("Conectando..."):
+            try:
+                # 1. Generar Texto
+                response = model.generate_content(f"{INSTRUCCION}\nUsuario: {prompt}")
+                texto = response.text
+                st.markdown(texto)
+                
+                # 2. Generar/Obtener Imagen (CON TRUCO)
+                img_bytes = mostrar_imagen_postura(texto)
+
+                # 3. Generar Audio
+                audio_bytes = None
+                if usar_voz and client_eleven:
+                    audio_bytes = generar_audio_elevenlabs(texto)
+                    if audio_bytes: st.audio(audio_bytes, format="audio/mp3")
+
+                # 4. Guardar todo
+                msg = {"role": "assistant", "content": texto}
+                if audio_bytes: msg["audio_data"] = audio_bytes
+                if img_bytes: msg["imagen_data"] = img_bytes # Guardamos la imagen para que no desaparezca
+                
+                st.session_state.mensajes.append(msg)
+                
+            except Exception as e:
+                st.error(f"Error: {e}")
