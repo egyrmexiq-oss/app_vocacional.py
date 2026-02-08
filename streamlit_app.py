@@ -25,31 +25,69 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 2. SISTEMA DE LOGIN QUANTUM (NUEVO)
+# 🔐 2. SISTEMA DE LOGIN QUANTUM (MODO CINE 🎬)
 # ==========================================
 if "usuario_activo" not in st.session_state:
-    # Diseño de la Pantalla de Login
+    # --- CSS ESPECÍFICO PARA EL LOGIN (FONDO PANTALLA COMPLETA) ---
+    st.markdown(f"""
+        <style>
+        /* 1. Ocultar la Sidebar y la barra superior solo en el Login */
+        [data-testid="stSidebar"] {{ display: none; }}
+        [data-testid="stHeader"] {{ background-color: rgba(0,0,0,0); }}
+        
+        /* 2. Imagen de Fondo que cubre TODO */
+        .stApp {{
+            background-image: url("https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }}
+        
+        /* 3. Tarjeta Central (Efecto Cristal) */
+        .login-card {{
+            background-color: rgba(14, 22, 33, 0.85); /* Fondo oscuro semitransparente */
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid #30363D;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            max-width: 400px;
+            margin: 0 auto;
+            margin-top: 100px; /* Bajarla un poco */
+        }}
+        h2 {{ color: white !important; }}
+        p {{ color: #b0b8c4 !important; }}
+        </style>
+        """, unsafe_allow_html=True)
+
+    # --- ESTRUCTURA VISUAL ---
+    # Usamos columnas para centrar la "Tarjeta"
     col1, col2, col3 = st.columns([1, 2, 1])
+    
     with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        # Imagen futurista para el login
-        st.image("https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop", caption="Quantum Future Path", use_container_width=True)
-        st.markdown("<h2 style='text-align: center;'>Acceso al Futuro</h2>", unsafe_allow_html=True)
-        st.info("Ingresa tu Clave de Acceso para diseñar tu plan de carrera.")
+        # Creamos el contenedor visual con HTML
+        st.markdown("""
+        <div class="login-card">
+            <h2 style='margin-bottom: 10px;'>Quantum Future Path 🚀</h2>
+            <p style='margin-bottom: 20px;'>Diseña tu futuro a prueba de obsolescencia.</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        clave_input = st.text_input("🔑 Clave de Acceso:", type="password")
+        # Inputs de Streamlit (fuera del HTML para que funcionen)
+        # Usamos un contenedor vacío para estilizar un poco mejor la posición
+        st.markdown("<div style='max-width: 400px; margin: 0 auto;'>", unsafe_allow_html=True)
+        clave_input = st.text_input("Ingresa tu Clave de Acceso:", type="password", placeholder="DEMO", label_visibility="collapsed")
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.button("Entrar al Sistema"):
-            # Buscar la clave en los Secrets
+        if st.button("🚀 INICIAR VIAJE", use_container_width=True):
             llaves_validas = st.secrets.get("access_keys", {})
-            
             if clave_input in llaves_validas:
                 st.session_state.usuario_activo = llaves_validas[clave_input]
-                st.success(f"¡Bienvenido, {st.session_state.usuario_activo}!")
-                st.rerun() # Recarga la página para mostrar la App
+                st.rerun()
             else:
-                st.error("❌ Acceso Denegado. Clave incorrecta.")
-    
+                st.error("⛔ Clave incorrecta. Intenta con DEMO.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
     st.stop() # 🛑 DETIENE TODO AQUÍ SI NO ESTÁ LOGUEADO
 
 # ==========================================
