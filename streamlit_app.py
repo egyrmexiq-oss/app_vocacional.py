@@ -6,11 +6,6 @@ import random
 from datetime import datetime
 
 # ==========================================
-# 🛡️ RED DE SEGURIDAD
-# ==========================================
-model = None 
-
-# ==========================================
 # ⚙️ 1. CONFIGURACIÓN Y ESTILOS
 # ==========================================
 st.set_page_config(page_title="Quantum Future Path", page_icon="🚀", layout="wide")
@@ -30,8 +25,37 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🧠 2. CONEXIÓN CON GEMINI
+# 🔐 2. SISTEMA DE LOGIN QUANTUM (NUEVO)
 # ==========================================
+if "usuario_activo" not in st.session_state:
+    # Diseño de la Pantalla de Login
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        # Imagen futurista para el login
+        st.image("https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop", caption="Quantum Future Path", use_container_width=True)
+        st.markdown("<h2 style='text-align: center;'>Acceso al Futuro</h2>", unsafe_allow_html=True)
+        st.info("Ingresa tu Clave de Acceso para diseñar tu plan de carrera.")
+        
+        clave_input = st.text_input("🔑 Clave de Acceso:", type="password")
+        
+        if st.button("Entrar al Sistema"):
+            # Buscar la clave en los Secrets
+            llaves_validas = st.secrets.get("access_keys", {})
+            
+            if clave_input in llaves_validas:
+                st.session_state.usuario_activo = llaves_validas[clave_input]
+                st.success(f"¡Bienvenido, {st.session_state.usuario_activo}!")
+                st.rerun() # Recarga la página para mostrar la App
+            else:
+                st.error("❌ Acceso Denegado. Clave incorrecta.")
+    
+    st.stop() # 🛑 DETIENE TODO AQUÍ SI NO ESTÁ LOGUEADO
+
+# ==========================================
+# 🧠 3. CONEXIÓN CON GEMINI
+# ==========================================
+model = None 
 api_key = st.secrets.get("GOOGLE_API_KEY")
 
 if api_key:
@@ -41,10 +65,10 @@ if api_key:
     except Exception as e:
         st.error(f"Error conectando con Gemini: {e}")
 else:
-    st.warning("⚠️ Falta configurar la GOOGLE_API_KEY en los Secrets de Streamlit.")
+    st.warning("⚠️ Falta configurar la GOOGLE_API_KEY en los Secrets.")
 
 # ==========================================
-# 🛠️ 3. FUNCIONES
+# 🛠️ 4. FUNCIONES
 # ==========================================
 def limpiar_texto(texto):
     return texto.encode('latin-1', 'ignore').decode('latin-1')
@@ -73,11 +97,13 @@ def generar_pdf_blindado(nombre, perfil, analisis):
     return pdf.output(dest='S').encode('latin-1')
 
 # ==========================================
-# 🏠 4. INTERFAZ (SIDEBAR)
+# 🏠 5. INTERFAZ (SIDEBAR) - Solo visible tras Login
 # ==========================================
 with st.sidebar:
     try: st.image("logo_quantum.png", use_container_width=True)
     except: st.header("Quantum 🚀")
+    
+    st.caption(f"Sesión: **{st.session_state.usuario_activo}**") # Muestra quién está conectado
     
     st.title("Parámetros de Diseño")
     if "visitas" not in st.session_state: st.session_state.visitas = random.randint(1200, 1800)
@@ -88,7 +114,6 @@ with st.sidebar:
     edad = st.slider("Edad Cronológica:", 15, 60, 17)
     
     st.markdown("### 🚫 ¿Qué ODIAS?")
-    # Lista de odio
     odio_materias = st.multiselect("No me hables de:", ["Matemáticas Avanzadas", "Leer mucha Historia", "Química/Biología", "Hablar en público", "Estar sentado todo el día", "Trabajo físico pesado", "Programación/Código", "Vender/Convencer gente"])
     
     st.markdown("### ❤️ ¿Qué AMAS?")
@@ -98,9 +123,13 @@ with st.sidebar:
     
     st.markdown("---")
     analizar_btn = st.button("🔮 Generar Futuro Blindado")
+    
+    if st.button("🔒 Cerrar Sesión"):
+        del st.session_state["usuario_activo"]
+        st.rerun()
 
 # ==========================================
-# 🚀 5. ÁREA PRINCIPAL
+# 🚀 6. ÁREA PRINCIPAL
 # ==========================================
 st.title("Quantum Future Path 🏛️")
 st.markdown(f"Diseñando la mejor versión profesional para: **{nombre}**")
@@ -118,7 +147,7 @@ if analizar_btn:
     if not model:
         st.error("⚠️ Error de Conexión: No se pudo activar el cerebro de la IA. Revisa la API Key en Secrets.")
     else:
-        # --- PROMPT MEJORADO CON FILTRO NEGATIVO ---
+        # Prompt mejorado V2
         prompt_sistema = f"""
         ACTÚA COMO: Orientador Vocacional Futurista Senior.
         OBJETIVO: Crear un plan de carrera para {edad} años, resistente a la IA.
@@ -130,9 +159,6 @@ if analizar_btn:
         
         REGLA DE ORO (EXCLUSIÓN TOTAL):
         Si el usuario seleccionó que ODIA o EVITA un tema, ESTÁ PROHIBIDO sugerir carreras centradas en eso. 
-        Ejemplo: Si odia 'Historia', NO sugieras historiador, arqueólogo ni nada que requiera leer libros antiguos.
-        Ejemplo: Si odia 'Matemáticas', NO sugieras Ingeniería Física o Actuaría.
-        ¡Respeta sus aversiones! Busca caminos alternativos que usen sus Hobbies.
         
         TAREA:
         Genera 3 OPCIONES (1 Universitaria, 1 Técnica/Corta, 1 Oficio Digital/Moderno).
