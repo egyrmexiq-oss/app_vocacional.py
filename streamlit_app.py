@@ -50,12 +50,12 @@ st.markdown("""
 # Intenta obtener la clave de st.secrets, si no, usa un placeholder para evitar error al iniciar
 api_key = st.secrets.get("GOOGLE_API_KEY")
 
-if api_key:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
-else:
-    st.warning("⚠️ Falta configurar la GOOGLE_API_KEY en los Secrets.")
-    model = None
+#if api_key:
+    #genai.configure(api_key=api_key)
+   # model = genai.GenerativeModel('gemini-2.5-flash')
+#else:
+    #st.warning("⚠️ Falta configurar la GOOGLE_API_KEY en los Secrets.")
+    #model = None
 
 # ==========================================
 # 🛠️ 3. FUNCIONES (PDF Y LÓGICA)
