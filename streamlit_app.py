@@ -102,7 +102,7 @@ def generar_pdf_blindado(nombre, perfil, analisis):
 # ==========================================
 
 with st.sidebar:
-    st.image("logo_quantum.png", width=50) # Si tienes el logo, si no comenta esta línea
+    st.image("logo_quantum.png", use_container_width=True)
     st.title("Parámetros de Diseño")
     st.caption("Configura tu perfil para el análisis.")
     
