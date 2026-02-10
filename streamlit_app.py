@@ -147,6 +147,17 @@ with st.sidebar:
     if "visitas" not in st.session_state: st.session_state.visitas = random.randint(1200, 1800)
     st.metric("👀 Estudiantes Orientados", f"{st.session_state.visitas:,}")
     st.markdown("---")
+
+    st.markdown("---")
+    st.markdown(
+        """
+        <div style="background-color: #262730; padding: 10px; border-radius: 5px; text-align: center;">
+            <span style="color: white; font-weight: bold;">📊 Sesiones:</span>
+            <img src="https://api.visitorbadge.io/api/visitors?path=https://quantum-orientacion-vocacional.streamlit.app&label=&countColor=%2300C2FF&style=flat&labelStyle=none" style="height: 20px;" />
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     
     nombre = st.text_input("Nombre:", "Futuro CEO")
     edad = st.slider("Edad Cronológica:", 15, 60, 17)
